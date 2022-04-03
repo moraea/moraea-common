@@ -2,6 +2,7 @@
 
 #import "Utils.h"
 
+NSString* myPath;
 NSString* oldPath;
 NSString* newPath;
 NSString* codePath;
@@ -33,7 +34,8 @@ NSDictionary<NSString*,id>* runObjcHelper(NSString* path)
 {
 	trace(@"%@",path);
 	
-	assert(!runTask(@[@"StubberObjcHelper",path],nil,nil));
+	NSString* helperPath=[myPath.stringByDeletingLastPathComponent stringByAppendingPathComponent:@"StubberObjcHelper"];
+	assert(!runTask(@[helperPath,path],nil,nil));
 	
 	NSData* jsonData=[NSData dataWithContentsOfFile:@"StubberObjcTemp.json"];
 	assert(jsonData);
@@ -572,9 +574,12 @@ void runTasks()
 
 int main(int argCount,char** argList)
 {
+	// argList[0] is just "Stubber" if launched in a shell via PATH
+	myPath=NSProcessInfo.processInfo.arguments[0];
+	
 	if(argCount!=5)
 	{
-		trace(@"usage: %s old.dylib new.dylib shims_dir out.m",argList[0]);
+		trace(@"usage: %@ old.dylib new.dylib shims_dir out.m",myPath);
 		return 1;
 	}
 	
