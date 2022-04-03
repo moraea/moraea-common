@@ -37,7 +37,7 @@ NSDictionary<NSString*,id>* runObjcHelper(NSString* path)
 	NSString* helperPath=[myPath.stringByDeletingLastPathComponent stringByAppendingPathComponent:@"StubberObjcHelper"];
 	assert(!runTask(@[helperPath,path],nil,nil));
 	
-	NSData* jsonData=[NSData dataWithContentsOfFile:@"StubberObjcTemp.json"];
+	NSData* jsonData=[NSData dataWithContentsOfFile:@"/tmp/StubberObjcTemp.json"];
 	assert(jsonData);
 	
 	NSError* error=nil;

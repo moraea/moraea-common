@@ -216,5 +216,5 @@ int main(int argCount,char** argList)
 	NSData* jsonData=[NSJSONSerialization dataWithJSONObject:output options:0 error:&error];
 	assert(!error);
 	
-	[jsonData writeToFile:@"StubberObjcTemp.json" atomically:true];
+	[jsonData writeToFile:@"/tmp/StubberObjcTemp.json" atomically:true];
 }
