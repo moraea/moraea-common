@@ -4,6 +4,8 @@
 @import Darwin.POSIX.dlfcn;
 @import ObjectiveC.runtime;
 
+#import "Utils.h"
+
 // https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html
 
 NSMutableDictionary<NSString*,NSArray<NSString*>*>* basicTypes=nil;
@@ -143,11 +145,13 @@ NSDictionary<NSString*,id>* ivarInfo(Ivar ivar)
 int main(int argCount,char** argList)
 {
 	NSString* path=[NSString stringWithUTF8String:argList[1]];
+	trace(@"image %@",path);
+	
 	void* handle=dlopen(path.UTF8String,RTLD_LAZY);
 	char* dlerror2=dlerror();
 	if(dlerror2)
 	{
-		puts(dlerror2);
+		trace(@"dlerror %s",dlerror2);
 	}
 	assert(handle);
 	
@@ -165,6 +169,7 @@ int main(int argCount,char** argList)
 	}
 	free(images);
 	assert(fullPath);
+	trace(@"matched path %@",fullPath);
 	
 	unsigned int classCount;
 	const char** classNames=objc_copyClassNamesForImage(fullPath.UTF8String,&classCount);
@@ -173,6 +178,8 @@ int main(int argCount,char** argList)
 	
 	for(int classIndex=0;classIndex<classCount;classIndex++)
 	{
+		trace(@"class %d/%d",classIndex,classCount);
+		
 		Class class=objc_lookUpClass(classNames[classIndex]);
 		unsigned int ivarCount;
 		Ivar* ivars=class_copyIvarList(class,&ivarCount);
@@ -217,4 +224,6 @@ int main(int argCount,char** argList)
 	assert(!error);
 	
 	[jsonData writeToFile:@"/tmp/StubberObjcTemp.json" atomically:true];
+	
+	trace(@"done");
 }
