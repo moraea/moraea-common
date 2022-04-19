@@ -5,6 +5,8 @@
 BOOL traceLog=false;
 BOOL tracePrint=true;
 
+#define TRACE_LOG_LIMIT 800
+
 void trace(NSString* format,...)
 {
 	va_list argList;
@@ -14,7 +16,21 @@ void trace(NSString* format,...)
 	
 	if(traceLog)
 	{
-		NSLog(@"Moraea: %@",message);
+		// workaround NSLog character limit
+		
+		if(message.length>TRACE_LOG_LIMIT)
+		{
+			for(long offset=0;offset<message.length;offset+=TRACE_LOG_LIMIT)
+			{
+				NSRange range=NSMakeRange(offset,MIN(TRACE_LOG_LIMIT,message.length-offset));
+				NSString* chunk=[message substringWithRange:range];
+				NSLog(@"Moraea (chunked): %@",chunk);
+			}
+		}
+		else
+		{
+			NSLog(@"Moraea: %@",message);
+		}
 	}
 	
 	if(tracePrint)
