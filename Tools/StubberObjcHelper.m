@@ -39,22 +39,14 @@ NSDictionary<NSString*,NSArray<NSString*>*>* getBasicTypes()
 	return basicTypes;
 }
 
-// TODO: make it go up the inheritance hierarchy and check for methods on parents
-// rather than hardcoding NSObject ones
-
 NSMutableArray<NSString*>* bannedMethods=nil;
 NSArray<NSString*>* getBannedMethods()
 {
 	if(!bannedMethods)
 	{
 		bannedMethods=NSMutableArray.alloc.init;
-		[bannedMethods addObject:@"isEqual:"];
-		[bannedMethods addObject:@"hash"];
-		[bannedMethods addObject:@"dealloc"];
 		[bannedMethods addObject:@".cxx_destruct"];
 		[bannedMethods addObject:@".cxx_construct"];
-		[bannedMethods addObject:@"observationInfo"];
-		[bannedMethods addObject:@"setObservationInfo:"];
 	}
 	
 	return bannedMethods;
@@ -84,7 +76,7 @@ NSString* stubValueFromEncoding(const char* encodingC)
 	return lookupEncoding(encodingC)[1];
 }
 
-NSDictionary<NSString*,id>* methodInfo(Method method,BOOL instance)
+NSDictionary<NSString*,id>* methodInfo(Method method,BOOL instance,NSDictionary<NSString*,id>* superInfo)
 {
 	NSMutableString* stub=NSMutableString.alloc.init.autorelease;
 	
@@ -96,9 +88,34 @@ NSDictionary<NSString*,id>* methodInfo(Method method,BOOL instance)
 	const char* combinedType=method_getTypeEncoding(method);
 	[stub appendFormat:@"// %@ %s %s\n",name,returnType,combinedType];
 	
-	if([getBannedMethods() containsObject:name])
+	BOOL override=false;
+	NSDictionary<NSString*,id>* currentSuperInfo=superInfo;
+	while(currentSuperInfo)
 	{
-		[stub appendString:@"// skipped - in StubberObjcHelper.bannedMethods\n"];
+		for(NSDictionary<NSString*,id>* superMethod in currentSuperInfo[@"methods"])
+		{
+			if(((NSNumber*)superMethod[@"instance"]).boolValue==instance&&[superMethod[@"name"] isEqualToString:name])
+			{
+				override=true;
+				break;
+			}
+		}
+		
+		if(override)
+		{
+			break;
+		}
+		
+		currentSuperInfo=currentSuperInfo[@"super"];
+	}
+	
+	if(override)
+	{
+		[stub appendString:@"// skipped - implemented in superclass\n"];
+	}
+	else if([getBannedMethods() containsObject:name])
+	{
+		[stub appendString:@"// skipped - in banned method list\n"];
 	}
 	else
 	{
@@ -142,6 +159,57 @@ NSDictionary<NSString*,id>* ivarInfo(Ivar ivar)
 	return output;
 }
 
+NSDictionary<NSString*,id>* classInfo(const char* className)
+{
+	NSMutableDictionary<NSString*,id>* output=NSMutableDictionary.alloc.init.autorelease;
+	
+	output[@"name"]=[NSString stringWithUTF8String:className];
+	
+	Class class=objc_lookUpClass(className);
+	unsigned int ivarCount;
+	Ivar* ivars=class_copyIvarList(class,&ivarCount);
+	unsigned int methodCount;
+	Method* methods=class_copyMethodList(class,&methodCount);
+	Class metaClass=objc_getMetaClass(className);
+	unsigned int metaMethodCount;
+	Method* metaMethods=class_copyMethodList(metaClass,&metaMethodCount);
+	
+	NSMutableArray<NSDictionary*>* ivarOutput=NSMutableArray.alloc.init.autorelease;
+	for(int ivarIndex=0;ivarIndex<ivarCount;ivarIndex++)
+	{
+		[ivarOutput addObject:ivarInfo(ivars[ivarIndex])];
+	}
+	
+	free(ivars);
+	
+	output[@"ivars"]=ivarOutput;
+	
+	const char* superName=class_getName(class_getSuperclass(class));
+	NSDictionary* superInfo=nil;
+	if(strcmp(className,"NSObject"))
+	{
+		superInfo=classInfo(superName);
+		output[@"super"]=superInfo;
+	}
+	
+	NSMutableArray<NSDictionary*>* methodOutput=NSMutableArray.alloc.init.autorelease;
+	for(int methodIndex=0;methodIndex<methodCount;methodIndex++)
+	{
+		[methodOutput addObject:methodInfo(methods[methodIndex],true,superInfo)];
+	}
+	for(int methodIndex=0;methodIndex<metaMethodCount;methodIndex++)
+	{
+		[methodOutput addObject:methodInfo(metaMethods[methodIndex],false,superInfo)];
+	}
+	
+	free(methods);
+	free(metaMethods);
+	
+	output[@"methods"]=methodOutput;
+	
+	return output;
+}
+
 int main(int argCount,char** argList)
 {
 	NSString* path=[NSString stringWithUTF8String:argList[1]];
@@ -178,43 +246,9 @@ int main(int argCount,char** argList)
 	
 	for(int classIndex=0;classIndex<classCount;classIndex++)
 	{
-		trace(@"class %d/%d",classIndex,classCount);
+		trace(@"class %d/%d: %s",classIndex,classCount,classNames[classIndex]);
 		
-		Class class=objc_lookUpClass(classNames[classIndex]);
-		unsigned int ivarCount;
-		Ivar* ivars=class_copyIvarList(class,&ivarCount);
-		unsigned int methodCount;
-		Method* methods=class_copyMethodList(class,&methodCount);
-		Class metaClass=objc_getMetaClass(classNames[classIndex]);
-		unsigned int metaMethodCount;
-		Method* metaMethods=class_copyMethodList(metaClass,&metaMethodCount);
-		
-		NSMutableArray<NSDictionary*>* ivarOutput=NSMutableArray.alloc.init.autorelease;
-		for(int ivarIndex=0;ivarIndex<ivarCount;ivarIndex++)
-		{
-			[ivarOutput addObject:ivarInfo(ivars[ivarIndex])];
-		}
-		
-		NSMutableArray<NSDictionary*>* methodOutput=NSMutableArray.alloc.init.autorelease;
-		for(int methodIndex=0;methodIndex<methodCount;methodIndex++)
-		{
-			[methodOutput addObject:methodInfo(methods[methodIndex],true)];
-		}
-		for(int methodIndex=0;methodIndex<metaMethodCount;methodIndex++)
-		{
-			[methodOutput addObject:methodInfo(metaMethods[methodIndex],false)];
-		}
-		
-		free(ivars);
-		free(methods);
-		free(metaMethods);
-		
-		NSMutableDictionary<NSString*,id>* classOutput=NSMutableDictionary.alloc.init;
-		classOutput[@"methods"]=methodOutput;
-		classOutput[@"ivars"]=ivarOutput;
-		classOutput[@"name"]=[NSString stringWithUTF8String:classNames[classIndex]];
-		
-		[output addObject:classOutput];
+		[output addObject:classInfo(classNames[classIndex])];
 	}
 	
 	free(classNames);
@@ -223,7 +257,8 @@ int main(int argCount,char** argList)
 	NSData* jsonData=[NSJSONSerialization dataWithJSONObject:output options:0 error:&error];
 	assert(!error);
 	
-	[jsonData writeToFile:@"/tmp/StubberObjcTemp.json" atomically:true];
+	NSString* file=@"/tmp/StubberObjcTemp.json";
+	[jsonData writeToFile:file atomically:true];
 	
-	trace(@"done");
+	trace(@"wrote %@",file);
 }
