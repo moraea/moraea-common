@@ -4,6 +4,7 @@
 
 BOOL traceLog=false;
 BOOL tracePrint=true;
+NSString* tracePrefix=@"Moraea";
 
 #define TRACE_LOG_LIMIT 800
 
@@ -24,12 +25,12 @@ void trace(NSString* format,...)
 			{
 				NSRange range=NSMakeRange(offset,MIN(TRACE_LOG_LIMIT,message.length-offset));
 				NSString* chunk=[message substringWithRange:range];
-				NSLog(@"Moraea (chunked): %@",chunk);
+				NSLog(@"%@ (chunked): %@",tracePrefix,chunk);
 			}
 		}
 		else
 		{
-			NSLog(@"Moraea: %@",message);
+			NSLog(@"%@: %@",tracePrefix,message);
 		}
 	}
 	
