@@ -413,6 +413,19 @@ void initCommands()
 	{
 		alwaysCacheAssembly=false;
 	}];
+	
+	[commandNames addObject:@"assert"];
+	[commandExamples addObject:@"0x416d79"];
+	[commandBlocks addObject:^(NSArray<NSString*>* argList)
+	{
+		NSData* expected=dataFromHexString(argList[0]);
+		NSData* actual=[data subdataWithRange:NSMakeRange(position,expected.length)];
+		if(![expected isEqual:actual])
+		{
+			trace(@"mismatch");
+			exit(1);
+		}
+	}];
 }
 
 int main(int argCount,char* argList[])
