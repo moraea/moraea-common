@@ -248,7 +248,7 @@ int runObjcNewWay()
 				
 				if(allBitsMatch)
 				{
-					trace(@"matched shims %@ | %@",methodName,line);
+					// trace(@"matched shims %@ | %@",methodName,line);
 					skip=true;
 					break;
 				}
