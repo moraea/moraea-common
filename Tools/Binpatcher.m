@@ -172,11 +172,14 @@ void assemblyRegexCommon(NSArray<NSString*>* commandPrefix,NSArray<NSString*>* a
 	if(!dumpLines)
 	{
 		char tempPathC[]="/tmp/Binpatcher.XXXXX";
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 		if(!mktemp(tempPathC))
 		{
 			trace(@"mktemp error");
 			exit(1);
 		}
+#pragma clang diagnostic pop
 		
 		NSString* tempPath=[NSString stringWithUTF8String:tempPathC];
 		

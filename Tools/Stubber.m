@@ -32,12 +32,12 @@ NSArray<NSString*>* getSymbols(NSString* path)
 
 NSDictionary<NSString*,id>* runObjcHelper(NSString* path)
 {
-	trace(@"%@",path);
+	// trace(@"%@",path);
 	
 	NSString* helperPath=[myPath.stringByDeletingLastPathComponent stringByAppendingPathComponent:@"StubberObjcHelper"];
 	NSString* helperOut=nil;
 	BOOL success=!runTask(@[helperPath,path],nil,&helperOut);
-	trace(@"[helper]\n%@\n[end helper]",helperOut);
+	// trace(@"[helper]\n%@\n[end helper]",helperOut);
 	assert(success);
 	
 	NSData* jsonData=[NSData dataWithContentsOfFile:@"/tmp/StubberObjcTemp.json"];
@@ -76,7 +76,7 @@ int runObjcNewWay()
 				if([bits[index] containsString:@"implementation"])
 				{
 					parseClass=bits[index+1];
-					trace(@"into %@",parseClass);
+					// trace(@"into %@",parseClass);
 					break;
 				}
 			}
@@ -91,7 +91,7 @@ int runObjcNewWay()
 		
 		if([line containsString:@"@end"])
 		{
-			trace(@"out of %@",parseClass);
+			// trace(@"out of %@",parseClass);
 			parseClass=nil;
 			
 			continue;
@@ -105,7 +105,7 @@ int runObjcNewWay()
 		NSString* first2=[line substringToIndex:2];
 		if([first2 isEqualToString:@"-("]||[first2 isEqualToString:@"+("])
 		{
-			trace(@"method %@",line);
+			// trace(@"method %@",line);
 			
 			if(!shimMethodLines[parseClass])
 			{
@@ -135,14 +135,14 @@ int runObjcNewWay()
 		NSString* sanity=[@"_OBJC_CLASS_$_" stringByAppendingString:name];
 		if(![newSymbols containsObject:sanity])
 		{
-			trace(@"not exported %@",name);
+			// trace(@"not exported %@",name);
 			continue;
 		}
 		
 		NSString* block=[NSString stringWithFormat:@"// nostub %@\n",name];
 		if([shims containsString:block])
 		{
-			trace(@"explicitly blocked %@",name);
+			// trace(@"explicitly blocked %@",name);
 			continue;
 		}
 		
@@ -161,7 +161,7 @@ int runObjcNewWay()
 			NSString* block=[NSString stringWithFormat:@"// nostubinterface %@\n",name];
 			if([shims containsString:block])
 			{
-				trace(@"explicit nostubinterface %@",name);
+				// trace(@"explicit nostubinterface %@",name);
 			}
 			else
 			{
@@ -259,7 +259,7 @@ int runObjcNewWay()
 				continue;
 			}
 			
-			trace(@"method %@",methodName);
+			// trace(@"method %@",methodName);
 			
 			addClass=true;
 			
@@ -271,7 +271,7 @@ int runObjcNewWay()
 		
 		if(addClass)
 		{
-			trace(@"class %@",name);
+			// trace(@"class %@",name);
 			[output appendString:classOutput];
 		}
 	}
