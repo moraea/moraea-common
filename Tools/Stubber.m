@@ -7,6 +7,8 @@ NSString* oldPath;
 NSString* newPath;
 NSString* codePath;
 NSString* outPath;
+NSString* hackNewPath;
+NSString* hackOldPath;
 
 NSString* name;
 NSArray<NSString*>* oldSymbols;
@@ -30,17 +32,33 @@ NSArray<NSString*>* getSymbols(NSString* path)
 	return [symbolsString componentsSeparatedByString:@"\n"];
 }
 
-NSDictionary<NSString*,id>* runObjcHelper(NSString* path)
+NSDictionary<NSString*,id>* runObjcHelper(NSString* path,NSString* hackPath)
 {
-	// trace(@"%@",path);
+	NSData* jsonData=nil;
 	
-	NSString* helperPath=[myPath.stringByDeletingLastPathComponent stringByAppendingPathComponent:@"StubberObjcHelper"];
-	NSString* helperOut=nil;
-	BOOL success=!runTask(@[helperPath,path],nil,&helperOut);
-	// trace(@"[helper]\n%@\n[end helper]",helperOut);
-	assert(success);
+	if(hackPath)
+	{
+		if([NSFileManager.defaultManager fileExistsAtPath:hackPath])
+		{
+			trace(@"found json hack %@, skipping dlopen helper",hackPath);
+			jsonData=[NSData dataWithContentsOfFile:hackPath];
+		}
+		else
+		{
+			trace(@"hack path %@ specified but not found! falling back to dlopen helper",hackPath);
+		}
+	}
 	
-	NSData* jsonData=[NSData dataWithContentsOfFile:@"/tmp/StubberObjcTemp.json"];
+	if(!jsonData)
+	{
+		NSString* helperPath=[myPath.stringByDeletingLastPathComponent stringByAppendingPathComponent:@"StubberObjcHelper"];
+		NSString* helperOut=nil;
+		BOOL success=!runTask(@[helperPath,path],nil,&helperOut);
+		assert(success);
+		
+		jsonData=[NSData dataWithContentsOfFile:@"/tmp/StubberObjcTemp.json"];
+	}
+	
 	assert(jsonData);
 	
 	NSError* error=nil;
@@ -54,8 +72,8 @@ int runObjcNewWay()
 {
 	trace(@"RUN HELPER");
 	
-	NSDictionary<NSString*,id>* oldInfo=runObjcHelper(oldPath);
-	NSDictionary<NSString*,id>* newInfo=runObjcHelper(newPath);
+	NSDictionary<NSString*,id>* oldInfo=runObjcHelper(oldPath,hackOldPath);
+	NSDictionary<NSString*,id>* newInfo=runObjcHelper(newPath,hackNewPath);
 	
 	int count=0;
 	
@@ -551,7 +569,8 @@ void runTasks()
 				
 				for(unsigned int symbolIndex=0;symbolIndex<symbols.count;symbolIndex++)
 				{
-					int ret=taskBlocks[index](symbols[symbolIndex]);
+					int (^block)(NSString*)=taskBlocks[index];
+					int ret=block(symbols[symbolIndex]);
 					switch(ret)
 					{
 						case RET_ERROR:
@@ -580,9 +599,9 @@ int main(int argCount,char** argList)
 	// argList[0] is just "Stubber" if launched in a shell via PATH
 	myPath=NSProcessInfo.processInfo.arguments[0];
 	
-	if(argCount!=5)
+	if(argCount<5||argCount>7)
 	{
-		trace(@"usage: %@ old.dylib new.dylib shims_dir out.m",myPath);
+		trace(@"usage: %@ old.dylib new.dylib shims_dir out.m [hack_new.json hack_old.json]",myPath);
 		return 1;
 	}
 	
@@ -590,6 +609,17 @@ int main(int argCount,char** argList)
 	newPath=[NSString stringWithUTF8String:argList[2]];
 	codePath=[NSString stringWithUTF8String:argList[3]];
 	outPath=[NSString stringWithUTF8String:argList[4]];
+	
+	hackNewPath=nil;
+	hackOldPath=nil;
+	if(argCount>=6)
+	{
+		hackNewPath=[NSString stringWithUTF8String:argList[5]];
+	}
+	if(argCount==7)
+	{
+		hackOldPath=[NSString stringWithUTF8String:argList[6]];
+	}
 	
 	setupTasks();
 	
