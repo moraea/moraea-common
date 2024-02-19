@@ -21,6 +21,7 @@ NSMutableArray<NSString*>* constantNames;
 NSMutableArray<NSString*>* functionNames;
 NSString* shimMainPath;
 NSMutableString* aliases;
+NSMutableArray<NSString*>* fullyStubClasses;
 
 NSArray<NSString*>* getSymbols(NSString* path)
 {
@@ -76,6 +77,8 @@ int runObjcNewWay()
 	
 	NSDictionary<NSString*,id>* oldInfo=runObjcHelper(oldPath,hackOldPath);
 	NSDictionary<NSString*,id>* newInfo=runObjcHelper(newPath,hackNewPath);
+	
+	fullyStubClasses=NSMutableArray.alloc.init;
 	
 	int count=0;
 	
@@ -198,6 +201,8 @@ int runObjcNewWay()
 			oldMethods=@[];
 			
 			addClass=true;
+			
+			[fullyStubClasses addObject:name];
 			
 			[classOutput appendFormat:@"// stub - class doesn't exist at all\n@interface %@:NSObject\n{\n",name];
 			
@@ -448,10 +453,20 @@ void setupTasks()
 	{
 		if([symbol containsString:@"OBJC_IVAR"])
 		{
-			NSString* tempSymbol=[symbol stringByReplacingOccurrencesOfString:@"." withString:@"$$stubber_period$$"];
-			[constantNames addObject:tempSymbol];
-			
-			[aliases appendFormat:@"_%@ %@_\n",tempSymbol,symbol];
+			NSString* lookup=[[symbol componentsSeparatedByString:@"."][0] substringFromIndex:12];
+			if([fullyStubClasses containsObject:lookup])
+			{
+				trace(@"no %@",symbol);
+			}
+			else
+			{
+				trace(@"yes %@",symbol);
+				
+				NSString* tempSymbol=[symbol stringByReplacingOccurrencesOfString:@"." withString:@"$$stubber_period$$"];
+				[constantNames addObject:tempSymbol];
+				
+				[aliases appendFormat:@"_%@ _%@\n",tempSymbol,symbol];
+			}
 			
 			return RET_DONE_DELETE;
 		}
