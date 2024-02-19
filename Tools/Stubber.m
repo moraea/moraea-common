@@ -9,6 +9,7 @@ NSString* codePath;
 NSString* outPath;
 NSString* hackNewPath;
 NSString* hackOldPath;
+NSString* aliasesPath;
 
 NSString* name;
 NSArray<NSString*>* oldSymbols;
@@ -19,6 +20,7 @@ NSMutableString* shims;
 NSMutableArray<NSString*>* constantNames;
 NSMutableArray<NSString*>* functionNames;
 NSString* shimMainPath;
+NSMutableString* aliases;
 
 NSArray<NSString*>* getSymbols(NSString* path)
 {
@@ -429,7 +431,11 @@ void setupTasks()
 	
 	addTask(@"(new) skip objective-c symbols",TYPE_PER_SYMBOL,^int(NSString* symbol)
 	{
-		return [symbol containsString:@"OBJC_"]?RET_DONE_DELETE:RET_NULL;
+		if([symbol containsString:@"OBJC_"]&&![symbol containsString:@"OBJC_IVAR"])
+		{
+			return RET_DONE_DELETE;
+		}
+		return RET_NULL;
 	});
 	
 	addTask(@"init constants",TYPE_ONCE,^int()
@@ -440,9 +446,13 @@ void setupTasks()
 	
 	addTask(@"add constants",TYPE_PER_SYMBOL,^int(NSString* symbol)
 	{
-		if([NSCharacterSet.lowercaseLetterCharacterSet characterIsMember:[symbol characterAtIndex:0]])
+		if([symbol containsString:@"OBJC_IVAR"]||[NSCharacterSet.lowercaseLetterCharacterSet characterIsMember:[symbol characterAtIndex:0]])
 		{
-			[constantNames addObject:symbol];
+			NSString* tempSymbol=[symbol stringByReplacingOccurrencesOfString:@"." withString:@"$$stubber_period$$"];
+			[constantNames addObject:tempSymbol];
+			
+			[aliases appendFormat:@"_%@ %@_\n",tempSymbol,symbol];
+			
 			return RET_DONE_DELETE;
 		}
 		return RET_NULL;
@@ -599,9 +609,9 @@ int main(int argCount,char** argList)
 	// argList[0] is just "Stubber" if launched in a shell via PATH
 	myPath=NSProcessInfo.processInfo.arguments[0];
 	
-	if(argCount<5||argCount>7)
+	if(argCount<5||argCount>8)
 	{
-		trace(@"usage: %@ old.dylib new.dylib shims_dir out.m [hack_new.json hack_old.json]",myPath);
+		trace(@"usage: %@ old.dylib new.dylib shims_dir out.m [hack_new.json hack_old.json aliases.txt]",myPath);
 		return 1;
 	}
 	
@@ -610,15 +620,21 @@ int main(int argCount,char** argList)
 	codePath=[NSString stringWithUTF8String:argList[3]];
 	outPath=[NSString stringWithUTF8String:argList[4]];
 	
+	aliases=NSMutableString.alloc.init;
+	
 	hackNewPath=nil;
 	hackOldPath=nil;
 	if(argCount>=6)
 	{
 		hackNewPath=[NSString stringWithUTF8String:argList[5]];
 	}
-	if(argCount==7)
+	if(argCount>=7)
 	{
 		hackOldPath=[NSString stringWithUTF8String:argList[6]];
+	}
+	if(argCount>=8)
+	{
+		aliasesPath=[NSString stringWithUTF8String:argList[7]];
 	}
 	
 	setupTasks();
@@ -627,6 +643,11 @@ int main(int argCount,char** argList)
 	trace(@"name: %@",name);
 	
 	runTasks();
+	
+	if(aliasesPath)
+	{
+		[aliases writeToFile:aliasesPath atomically:true encoding:NSUTF8StringEncoding error:nil];
+	}
 	
 	return 0;
 }

@@ -154,7 +154,7 @@ NSDictionary<NSString*,id>* ivarInfo(Ivar ivar)
 	const char* type=ivar_getTypeEncoding(ivar);
 	
 	output[@"name"]=name;
-	output[@"stub"]=[NSString stringWithFormat:@"%@ %@;\n",typeFromEncoding(type),name];
+	output[@"stub"]=[NSString stringWithFormat:@"// stub ivar\n%@ %@;\n",typeFromEncoding(type),name];
 	
 	return output;
 }
@@ -186,7 +186,7 @@ NSDictionary<NSString*,id>* classInfo(const char* className)
 	
 	const char* superName=class_getName(class_getSuperclass(class));
 	NSDictionary* superInfo=nil;
-	if(strcmp(className,"NSObject"))
+	if(strcmp(className,"NSObject")&&strcmp(className,"NSProxy"))
 	{
 		superInfo=classInfo(superName);
 		output[@"super"]=superInfo;
