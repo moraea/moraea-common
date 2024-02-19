@@ -446,12 +446,18 @@ void setupTasks()
 	
 	addTask(@"add constants",TYPE_PER_SYMBOL,^int(NSString* symbol)
 	{
-		if([symbol containsString:@"OBJC_IVAR"]||[NSCharacterSet.lowercaseLetterCharacterSet characterIsMember:[symbol characterAtIndex:0]])
+		if([symbol containsString:@"OBJC_IVAR"])
 		{
 			NSString* tempSymbol=[symbol stringByReplacingOccurrencesOfString:@"." withString:@"$$stubber_period$$"];
 			[constantNames addObject:tempSymbol];
 			
 			[aliases appendFormat:@"_%@ %@_\n",tempSymbol,symbol];
+			
+			return RET_DONE_DELETE;
+		}
+		else if([NSCharacterSet.lowercaseLetterCharacterSet characterIsMember:[symbol characterAtIndex:0]])
+		{
+			[constantNames addObject:symbol];
 			
 			return RET_DONE_DELETE;
 		}
