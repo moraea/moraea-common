@@ -33,14 +33,16 @@ int main(int argc,char** argv)
 			
 			info->symoff=0;
 			info->nsyms=0;
-			info->stroff=0;
-			info->strsize=0;
+			// info->stroff=0;
+			// info->strsize=0;
 			
 			gotLegacy=true;
 		}
 		
 		command=(struct load_command*)(((char*)command)+command->cmdsize);
 	}
+	
+	assert(gotDyld&&gotLegacy);
 	
 	trace(@"kill symtab write %@",output);
 	
