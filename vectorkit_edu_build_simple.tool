@@ -6,7 +6,7 @@ cd "$(dirname "$0")"
 
 function clangCommon
 {
-	clang -fmodules -dynamiclib -compatibility_version 1.0.0 -current_version 1.0.0 $@
+	clang -fmodules -dynamiclib -compatibility_version 1.0.0 -current_version 1.0.0 -mmacosx-version-min=12 $@
 }
 
 # setup
