@@ -186,7 +186,7 @@ NSDictionary<NSString*,id>* classInfo(const char* className)
 	
 	const char* superName=class_getName(class_getSuperclass(class));
 	NSDictionary* superInfo=nil;
-	if(strcmp(className,"NSObject"))
+	if(strcmp(className,"NSObject")&&strcmp(className,"NSProxy"))
 	{
 		superInfo=classInfo(superName);
 		output[@"super"]=superInfo;
