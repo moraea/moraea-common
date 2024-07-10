@@ -5,8 +5,10 @@
 
 // https://opensource.apple.com/source/dyld/dyld-852/include/mach-o/dyld-interposing.h
 #import "dyld-interposing.h"
+#import "Availability.h"
 
 #import "Trace.m"
 #import "MachO.m"
 #import "Task.m"
 #import "Swizzle.m"
+#import "StubberSupport.h"
