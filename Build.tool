@@ -64,6 +64,8 @@ main() {
 	buildTool Binpatcher
 	# Copy the utility headers
 	cp -Rc $SOURCES/Utils $OUTDIR/Utils
+	# Copy the utility scripts
+	cp -Rc $SOURCES/Gadgets $OUTDIR
 }
 
 main "$@"
