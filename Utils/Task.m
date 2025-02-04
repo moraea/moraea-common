@@ -1,5 +1,6 @@
-// TODO: make this compile on Catalyst and remove
-#if ! TARGET_OS_MACCATALYST
+// TODO: make this work on these platforms if we ever care
+
+#if !TARGET_OS_MACCATALYST && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_10_13
 
 int runTask(NSArray<NSString*>* command,NSString* workingPath,NSString** output)
 {
