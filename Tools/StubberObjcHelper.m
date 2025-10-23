@@ -55,6 +55,18 @@ NSArray<NSString*>* getBannedMethods()
 NSArray<NSString*>* lookupEncoding(const char* encodingC)
 {
 	NSString* encoding=[NSString stringWithUTF8String:encodingC];
+	
+	/*
+	
+	genuinely empty in 15.5 MPSCore, MPSKernelDAGObject._sha256, i guess that's valid?
+	
+	*/
+	
+	if(encoding.length==0)
+	{
+		return @[@"NSString*",@"@\"empty type encoding??\""];
+	}
+	
 	NSString* firstChar=[encoding substringToIndex:1];
 	NSArray<NSString*>* result=getBasicTypes()[firstChar];
 	

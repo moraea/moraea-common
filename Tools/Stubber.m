@@ -153,7 +153,7 @@ int runObjcNewWay()
 		NSString* sanity=[@"_OBJC_CLASS_$_" stringByAppendingString:name];
 		if(![newSymbols containsObject:sanity])
 		{
-			// trace(@"not exported %@",name);
+			trace(@"skip non-exported class %@",name);
 			continue;
 		}
 		

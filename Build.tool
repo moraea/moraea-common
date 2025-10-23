@@ -15,3 +15,4 @@ build Stubber
 build StubberObjcHelper
 build Renamer
 build Binpatcher
+build BundleToDylib
