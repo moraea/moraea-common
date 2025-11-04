@@ -1,6 +1,5 @@
 @import Foundation;
-@import MachO.loader;
-@import MachO.nlist;
+@import MachO;
 @import ObjectiveC.runtime;
 
 // https://opensource.apple.com/source/dyld/dyld-852/include/mach-o/dyld-interposing.h

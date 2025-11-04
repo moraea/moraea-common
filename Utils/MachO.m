@@ -110,3 +110,80 @@ unsigned int readULEB128(char** input)
 	*input+=1;
 	return result;
 }
+
+BOOL findLegacySymbolTable(char* pathSearch,struct nlist_64** symbolsOut,int* symbolCountOut,char** stringsOut,long* slideOut)
+{
+	struct mach_header_64* header=NULL;
+	
+	int dylibCount=_dyld_image_count();
+	for(int index=0;index<dylibCount;index++)
+	{
+		if(strstr(_dyld_get_image_name(index),pathSearch))
+		{
+			header=(struct mach_header_64*)_dyld_get_image_header(index);
+			break;
+		}
+	}
+	
+	if(!header)
+	{
+		return false;
+	}
+	
+	struct symtab_command* symtabCommand=NULL;
+	struct segment_command_64* textCommand=NULL;
+	struct segment_command_64* linkeditCommand=NULL;
+	
+	struct load_command* command=(struct load_command*)(header+1);
+	for(int index=0;index<header->ncmds;index++)
+	{
+		if(command->cmd==LC_SYMTAB)
+		{
+			symtabCommand=(struct symtab_command*)command;
+		}
+		
+		if(command->cmd==LC_SEGMENT_64)
+		{
+			struct segment_command_64* segmentCommand=(struct segment_command_64*)command;
+			if(!strcmp(segmentCommand->segname,SEG_TEXT))
+			{
+				textCommand=segmentCommand;
+			}
+			if(!strcmp(segmentCommand->segname,SEG_LINKEDIT))
+			{
+				linkeditCommand=segmentCommand;
+			}
+		}
+		
+		command=(struct load_command*)(((char*)command)+command->cmdsize);
+	}
+	
+	if(!symtabCommand||!textCommand||!linkeditCommand)
+	{
+		return false;
+	}
+	
+	long slide=(long)header-textCommand->vmaddr;
+	char* symtabBase=(char*)slide+linkeditCommand->vmaddr-linkeditCommand->fileoff;
+	
+	*symbolsOut=(struct nlist_64*)(symtabBase+symtabCommand->symoff);
+	*symbolCountOut=symtabCommand->nsyms;
+	*stringsOut=symtabBase+symtabCommand->stroff;
+	*slideOut=slide;
+	
+	return true;
+}
+
+char* findLegacySymbol(struct nlist_64* symbols,int symbolCount,char* strings,long slide,char* nameSearch)
+{
+	for(int index=0;index<symbolCount;index++)
+	{
+		char* name=strings+symbols[index].n_un.n_strx;
+		if(strstr(name,nameSearch))
+		{
+			return (char*)slide+symbols[index].n_value;
+		}
+	}
+	
+	return NULL;
+}
