@@ -1,6 +1,7 @@
 @import Foundation;
 @import MachO;
-@import ObjectiveC.runtime;
+@import ObjectiveC;
+@import Darwin;
 
 // https://opensource.apple.com/source/dyld/dyld-852/include/mach-o/dyld-interposing.h
 #import "dyld-interposing.h"

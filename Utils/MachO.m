@@ -187,3 +187,40 @@ char* findLegacySymbol(struct nlist_64* symbols,int symbolCount,char* strings,lo
 	
 	return NULL;
 }
+
+/*
+
+TODO: compare performance caching address ranges instead of individual mappings?
+
+*/
+
+NSMutableDictionary<NSNumber*,NSString*>* addressToImageCache=nil;
+
+NSString* getImageWithAddress(void* caller)
+{
+	NSNumber* key=@((long)caller);
+	
+	@synchronized(addressToImageCache)
+	{
+		if(!addressToImageCache)
+		{
+			addressToImageCache=NSMutableDictionary.alloc.init;
+		}
+		
+		if(!addressToImageCache[key])
+		{
+			Dl_info info;
+			dladdr(caller,&info);
+			addressToImageCache[key]=@(info.dli_fname);
+		}
+		
+		return addressToImageCache[key];
+	}
+}
+
+__attribute__((always_inline)) NSString* getCallingImage()
+{
+	void* caller=__builtin_extract_return_addr(__builtin_return_address(0));
+	
+	return getImageWithAddress(caller);
+}
