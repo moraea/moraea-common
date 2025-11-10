@@ -188,34 +188,73 @@ char* findLegacySymbol(struct nlist_64* symbols,int symbolCount,char* strings,lo
 	return NULL;
 }
 
-/*
-
-TODO: compare performance caching address ranges instead of individual mappings?
-
-*/
-
-NSMutableDictionary<NSNumber*,NSString*>* addressToImageCache=nil;
+dispatch_once_t imageWithAddressOnce;
+NSMutableArray<NSString*>* imageWithAddressNames;
+NSMutableArray<NSNumber*>* imageWithAddressStarts;
+NSMutableArray<NSNumber*>* imageWithAddressEnds;
 
 NSString* getImageWithAddress(void* caller)
 {
-	NSNumber* key=@((long)caller);
-	
-	@synchronized(addressToImageCache)
+	dispatch_once(&imageWithAddressOnce,^()
 	{
-		if(!addressToImageCache)
+		imageWithAddressNames=NSMutableArray.alloc.init;
+		imageWithAddressStarts=NSMutableArray.alloc.init;
+		imageWithAddressEnds=NSMutableArray.alloc.init;
+		
+		int imageCount=_dyld_image_count();
+		for(int imageIndex=0;imageIndex<imageCount;imageIndex++)
 		{
-			addressToImageCache=NSMutableDictionary.alloc.init;
+			struct mach_header_64* header=(struct mach_header_64*)_dyld_get_image_header(imageIndex);
+			
+			struct load_command* command=(struct load_command*)(header+1);
+			for(int commandIndex=0;commandIndex<header->ncmds;commandIndex++)
+			{
+				if(command->cmd==LC_SEGMENT_64)
+				{
+					struct segment_command_64* segment=(struct segment_command_64*)command;
+					if(!strcmp(segment->segname,SEG_TEXT))
+					{
+						long slide=(long)header-segment->vmaddr;
+						
+						NSString* name=@(_dyld_get_image_name(imageIndex));
+						NSNumber* start=@(segment->vmaddr+slide);
+						NSNumber* end=@(segment->vmaddr+segment->vmsize+slide);
+						
+						[imageWithAddressNames addObject:name];
+						[imageWithAddressStarts addObject:start];
+						[imageWithAddressEnds addObject:end];
+						
+						break;
+					}
+				}
+				
+				command=(struct load_command*)(((char*)command)+command->cmdsize);
+			}
+		}
+	});
+	
+	/*
+	
+	TODO: worth doing a binary search here? or put them in buckets like dsce..?
+	
+	*/
+	
+	for(int index=0;index<imageWithAddressNames.count;index++)
+	{
+		if((long)caller<imageWithAddressStarts[index].longValue)
+		{
+			continue;
 		}
 		
-		if(!addressToImageCache[key])
+		if((long)caller>imageWithAddressEnds[index].longValue)
 		{
-			Dl_info info;
-			dladdr(caller,&info);
-			addressToImageCache[key]=@(info.dli_fname);
+			continue;
 		}
 		
-		return addressToImageCache[key];
+		return imageWithAddressNames[index];
 	}
+	
+	return nil;
 }
 
 __attribute__((always_inline)) NSString* getCallingImage()
